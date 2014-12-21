@@ -1,4 +1,12 @@
 #include "clar_libgit2.h"
+#include "buffer.h"
+
+static git_buf buf = GIT_BUF_INIT;
+
+void test_config_read__cleanup(void)
+{
+	git_buf_free(&buf);
+}
 
 void test_config_read__simple_read(void)
 {
@@ -23,14 +31,15 @@ void test_config_read__case_sensitive(void)
 {
 	git_config *cfg;
 	int i;
-	const char *str;
 
 	cl_git_pass(git_config_open_ondisk(&cfg, cl_fixture("config/config1")));
 
-	cl_git_pass(git_config_get_string(&str, cfg, "this.that.other"));
-	cl_assert_equal_s(str, "true");
-	cl_git_pass(git_config_get_string(&str, cfg, "this.That.other"));
-	cl_assert_equal_s(str, "yes");
+	cl_git_pass(git_config_get_string_buf(&buf, cfg, "this.that.other"));
+	cl_assert_equal_s("true", git_buf_cstr(&buf));
+	git_buf_clear(&buf);
+
+	cl_git_pass(git_config_get_string_buf(&buf, cfg, "this.That.other"));
+	cl_assert_equal_s("yes", git_buf_cstr(&buf));
 
 	cl_git_pass(git_config_get_bool(&i, cfg, "this.that.other"));
 	cl_assert(i == 1);
@@ -50,12 +59,11 @@ void test_config_read__case_sensitive(void)
 void test_config_read__multiline_value(void)
 {
 	git_config *cfg;
-	const char *str;
 
 	cl_git_pass(git_config_open_ondisk(&cfg, cl_fixture("config/config2")));
 
-	cl_git_pass(git_config_get_string(&str, cfg, "this.That.and"));
-	cl_assert_equal_s(str, "one one one two two three three");
+	cl_git_pass(git_config_get_string_buf(&buf, cfg, "this.That.and"));
+	cl_assert_equal_s("one one one two two three three", git_buf_cstr(&buf));
 
 	git_config_free(cfg);
 }
@@ -66,15 +74,14 @@ void test_config_read__multiline_value(void)
 void test_config_read__subsection_header(void)
 {
 	git_config *cfg;
-	const char *str;
 
 	cl_git_pass(git_config_open_ondisk(&cfg, cl_fixture("config/config3")));
 
-	cl_git_pass(git_config_get_string(&str, cfg, "section.subsection.var"));
-	cl_assert_equal_s(str, "hello");
+	cl_git_pass(git_config_get_string_buf(&buf, cfg, "section.subsection.var"));
+	cl_assert_equal_s("hello", git_buf_cstr(&buf));
 
 	/* The subsection is transformed to lower-case */
-	cl_must_fail(git_config_get_string(&str, cfg, "section.subSectIon.var"));
+	cl_must_fail(git_config_get_string_buf(&buf, cfg, "section.subSectIon.var"));
 
 	git_config_free(cfg);
 }
@@ -82,21 +89,21 @@ void test_config_read__subsection_header(void)
 void test_config_read__lone_variable(void)
 {
 	git_config *cfg;
-	const char *str;
 	int i;
 
 	cl_git_pass(git_config_open_ondisk(&cfg, cl_fixture("config/config4")));
 
 	cl_git_fail(git_config_get_int32(&i, cfg, "some.section.variable"));
 
-	cl_git_pass(git_config_get_string(&str, cfg, "some.section.variable"));
-	cl_assert_equal_s(str, "");
+	cl_git_pass(git_config_get_string_buf(&buf, cfg, "some.section.variable"));
+	cl_assert_equal_s("", git_buf_cstr(&buf));
+	git_buf_clear(&buf);
 
 	cl_git_pass(git_config_get_bool(&i, cfg, "some.section.variable"));
 	cl_assert(i == 1);
 
-	cl_git_pass(git_config_get_string(&str, cfg, "some.section.variableeq"));
-	cl_assert_equal_s(str, "");
+	cl_git_pass(git_config_get_string_buf(&buf, cfg, "some.section.variableeq"));
+	cl_assert_equal_s("", git_buf_cstr(&buf));
 
 	cl_git_pass(git_config_get_bool(&i, cfg, "some.section.variableeq"));
 	cl_assert(i == 0);
@@ -182,14 +189,14 @@ void test_config_read__header_in_last_line(void)
 void test_config_read__prefixes(void)
 {
 	git_config *cfg;
-	const char *str;
 
 	cl_git_pass(git_config_open_ondisk(&cfg, cl_fixture("config/config9")));
-	cl_git_pass(git_config_get_string(&str, cfg, "remote.ab.url"));
-	cl_assert_equal_s(str, "http://example.com/git/ab");
+	cl_git_pass(git_config_get_string_buf(&buf, cfg, "remote.ab.url"));
+	cl_assert_equal_s("http://example.com/git/ab", git_buf_cstr(&buf));
+	git_buf_clear(&buf);
 
-	cl_git_pass(git_config_get_string(&str, cfg, "remote.abba.url"));
-	cl_assert_equal_s(str, "http://example.com/git/abba");
+	cl_git_pass(git_config_get_string_buf(&buf, cfg, "remote.abba.url"));
+	cl_assert_equal_s("http://example.com/git/abba", git_buf_cstr(&buf));
 
 	git_config_free(cfg);
 }
@@ -197,11 +204,10 @@ void test_config_read__prefixes(void)
 void test_config_read__escaping_quotes(void)
 {
 	git_config *cfg;
-	const char *str;
 
 	cl_git_pass(git_config_open_ondisk(&cfg, cl_fixture("config/config13")));
-	cl_git_pass(git_config_get_string(&str, cfg, "core.editor"));
-	cl_assert_equal_s("\"C:/Program Files/Nonsense/bah.exe\" \"--some option\"", str);
+	cl_git_pass(git_config_get_string_buf(&buf, cfg, "core.editor"));
+	cl_assert_equal_s("\"C:/Program Files/Nonsense/bah.exe\" \"--some option\"", git_buf_cstr(&buf));
 
 	git_config_free(cfg);
 }
@@ -361,15 +367,15 @@ void test_config_read__iterator_glob(void)
 void test_config_read__whitespace_not_required_around_assignment(void)
 {
 	git_config *cfg;
-	const char *str;
 
 	cl_git_pass(git_config_open_ondisk(&cfg, cl_fixture("config/config14")));
 
-	cl_git_pass(git_config_get_string(&str, cfg, "a.b"));
-	cl_assert_equal_s(str, "c");
+	cl_git_pass(git_config_get_string_buf(&buf, cfg, "a.b"));
+	cl_assert_equal_s("c", git_buf_cstr(&buf));
+	git_buf_clear(&buf);
 
-	cl_git_pass(git_config_get_string(&str, cfg, "d.e"));
-	cl_assert_equal_s(str, "f");
+	cl_git_pass(git_config_get_string_buf(&buf, cfg, "d.e"));
+	cl_assert_equal_s("f", git_buf_cstr(&buf));
 
 	git_config_free(cfg);
 }
@@ -377,7 +383,7 @@ void test_config_read__whitespace_not_required_around_assignment(void)
 void test_config_read__read_git_config_entry(void)
 {
 	git_config *cfg;
-	const git_config_entry *entry;
+	git_config_entry *entry;
 
 	cl_git_pass(git_config_new(&cfg));
 	cl_git_pass(git_config_add_file_ondisk(cfg, cl_fixture("config/config9"),
@@ -388,6 +394,7 @@ void test_config_read__read_git_config_entry(void)
 	cl_assert_equal_s("42", entry->value);
 	cl_assert_equal_i(GIT_CONFIG_LEVEL_SYSTEM, entry->level);
 
+	git_config_entry_free(entry);
 	git_config_free(cfg);
 }
 
@@ -478,7 +485,6 @@ void test_config_read__simple_read_from_specific_level(void)
 	git_config *cfg, *cfg_specific;
 	int i;
 	int64_t l, expected = +9223372036854775803;
-	const char *s;
 
 	cl_git_pass(git_config_new(&cfg));
 	cl_git_pass(git_config_add_file_ondisk(cfg, cl_fixture("config/config18"),
@@ -494,8 +500,8 @@ void test_config_read__simple_read_from_specific_level(void)
 	cl_assert(l == expected);
 	cl_git_pass(git_config_get_bool(&i, cfg_specific, "core.boolglobal"));
 	cl_assert_equal_b(true, i);
-	cl_git_pass(git_config_get_string(&s, cfg_specific, "core.stringglobal"));
-	cl_assert_equal_s("I'm a global config value!", s);
+	cl_git_pass(git_config_get_string_buf(&buf, cfg_specific, "core.stringglobal"));
+	cl_assert_equal_s("I'm a global config value!", git_buf_cstr(&buf));
 
 	git_config_free(cfg_specific);
 	git_config_free(cfg);
@@ -556,14 +562,13 @@ void test_config_read__corrupt_header3(void)
 void test_config_read__override_variable(void)
 {
 	git_config *cfg;
-	const char *str;
 
 	cl_set_cleanup(&clean_test_config, NULL);
 	cl_git_mkfile("./testconfig", "[some] var = one\nvar = two");
 	cl_git_pass(git_config_open_ondisk(&cfg, "./testconfig"));
 
-	cl_git_pass(git_config_get_string(&str, cfg, "some.var"));
-	cl_assert_equal_s(str, "two");
+	cl_git_pass(git_config_get_string_buf(&buf, cfg, "some.var"));
+	cl_assert_equal_s("two", git_buf_cstr(&buf));
 
 	git_config_free(cfg);
 }
