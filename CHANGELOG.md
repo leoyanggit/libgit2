@@ -1,6 +1,10 @@
 v0.22 + 1
 ------
 
+* The signature parameter in the ref-modifying functions has been
+  removed. Use `git_repository_set_ident()` and
+  `git_repository_ident()` to override the signature to be used.
+
 v0.22
 ------
 
