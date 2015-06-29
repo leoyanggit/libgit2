@@ -536,12 +536,31 @@ int git_repository_open(git_repository **repo_out, const char *path)
 		repo_out, path, GIT_REPOSITORY_OPEN_NO_SEARCH, NULL);
 }
 
-int git_repository_wrap_odb(git_repository **repo_out, git_odb *odb)
+int git_repository_wrap_odb(git_repository **repo_out,
+	const char *repo_path,
+	const char *workdir,
+	git_odb *odb)
 {
 	git_repository *repo;
 
 	repo = repository_alloc();
 	GITERR_CHECK_ALLOC(repo);
+
+	if (repo_path) {
+		repo->path_repository = git__strdup(repo_path);
+		if (!repo->path_repository) {
+			git_repository_free(repo);
+			return -1;
+		}
+	}
+
+	if (workdir) {
+		repo->workdir = git__strdup(workdir);
+		if (!repo->workdir) {
+			git_repository_free(repo);
+			return -1;
+		}
+	}
 
 	git_repository_set_odb(repo, odb);
 	*repo_out = repo;

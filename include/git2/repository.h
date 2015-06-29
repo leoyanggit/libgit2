@@ -40,14 +40,24 @@ GIT_EXTERN(int) git_repository_open(git_repository **out, const char *path);
  * Create a "fake" repository to wrap an object database
  *
  * Create a repository object to wrap an object database to be used
- * with the API when all you have is an object database. This doesn't
- * have any paths associated with it, so use with care.
+ * with the API when all you have is an object database.
  *
  * @param out pointer to the repo
+ *
+ * @param repo_path the path to the repository. It can be NULL. There isn't
+ * any sanity check against this path. Make sure it exists if you set it.
+ *
+ * @param workdir the working directory. It can be NULL. There isn't
+ * any sanity check against this path. Make sure it exists if you set it.
+ *
  * @param odb the object database to wrap
+ *
  * @return 0 or an error code
  */
-GIT_EXTERN(int) git_repository_wrap_odb(git_repository **out, git_odb *odb);
+GIT_EXTERN(int) git_repository_wrap_odb(git_repository **out,
+	const char *repo_path,
+	const char *workdir,
+	git_odb *odb);
 
 /**
  * Look for a git repository and copy its path in the given buffer.
