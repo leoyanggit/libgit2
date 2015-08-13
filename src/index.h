@@ -52,6 +52,13 @@ struct git_index_conflict_iterator {
 	size_t cur;
 };
 
+struct git_index_directory_iterator {
+	git_index *index;
+	char* dir;
+	int stage;
+	size_t cur;
+};
+
 extern void git_index_entry__init_from_stat(
 	git_index_entry *entry, struct stat *st, bool trust_mode);
 

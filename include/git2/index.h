@@ -754,6 +754,39 @@ GIT_EXTERN(int) git_index_conflict_next(
 GIT_EXTERN(void) git_index_conflict_iterator_free(
 	git_index_conflict_iterator *iterator);
 
+/**
+ * Create an iterator for a directory in the index.
+ *
+ * @param iterator_out The newly created iterator.
+ * @param index The index to iterate.
+ * @param dir The directory path
+ * @param stage The stage to iterate.
+ * @return 0 or error code.
+ */
+
+GIT_EXTERN(int) git_index_directory_iterator_new(
+	git_index_directory_iterator **iterator_out,
+	git_index *index, const char *dir, int stage);
+
+/**
+ * Return the current index entry in the directory.
+ *
+ * @param entry_out The returned index entry.
+ * @iterator The iterator.
+ * @return 0 (no error), GIT_ITEROVER(iteration is done) or an error code.
+ */
+GIT_EXTERN(int) git_index_directory_iterator_next(
+	const git_index_entry **entry_out,
+	git_index_directory_iterator *iterator);
+
+/**
+ * Free a `git_index_directory_iterator`.
+ *
+ * @param iterator The iterator to be free'd.
+ */
+GIT_EXTERN(void) git_index_directory_iterator_free(
+	git_index_directory_iterator *iterator);
+
 /**@}*/
 
 /** @} */

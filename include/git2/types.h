@@ -134,6 +134,9 @@ typedef struct git_index git_index;
 /** An iterator for conflicts in the index. */
 typedef struct git_index_conflict_iterator git_index_conflict_iterator;
 
+/** An iterator for a directory in the index. */
+typedef struct git_index_directory_iterator git_index_directory_iterator;
+
 /** Memory representation of a set of config files */
 typedef struct git_config git_config;
 

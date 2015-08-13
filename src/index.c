@@ -1724,6 +1724,79 @@ void git_index_conflict_iterator_free(git_index_conflict_iterator *iterator)
 	git__free(iterator);
 }
 
+int git_index_directory_iterator_new(
+	git_index_directory_iterator **iterator_out,
+	git_index *index, const char *dir, int stage)
+{
+	git_index_directory_iterator *it = NULL;
+	git_buf pfx = GIT_BUF_INIT;
+	int error = 0;
+	size_t pos;
+
+	assert(iterator_out && index);
+
+	if (!(error = git_buf_sets(&pfx, dir)) &&
+		!(error = git_path_to_dir(&pfx))) {
+		index_find(&pos, index, pfx.ptr, pfx.size, GIT_INDEX_STAGE_ANY, false);
+
+		it = git__calloc(1, sizeof(git_index_directory_iterator));
+		GITERR_CHECK_ALLOC(it);
+
+		it->index = index;
+		it->stage = stage;
+		it->cur = pos;
+		it->dir = git__malloc(pfx.size + 1);
+		if (it->dir == NULL) {
+			git_buf_free(&pfx);
+			git__free(it);
+			return -1;
+		}
+		memcpy(it->dir, pfx.ptr, pfx.size);
+		it->dir[pfx.size] = '\0';
+		git_buf_free(&pfx);
+
+		*iterator_out = it;
+		return 0;
+	}
+
+	return error;
+}
+
+int git_index_directory_iterator_next(
+	const git_index_entry **entry_out,
+	git_index_directory_iterator *iterator)
+{
+	git_index_entry *entry;
+
+	assert(entry_out && iterator);
+
+	for (;;) {
+		entry = git_vector_get(&iterator->index->entries, iterator->cur++);
+		if (!entry || git__prefixcmp(entry->path, iterator->dir) != 0)
+			break;
+
+		if (GIT_IDXENTRY_STAGE(entry) != iterator->stage) {
+			continue;
+		}
+
+		*entry_out = entry;
+		return 0;
+	}
+
+	return GIT_ITEROVER;
+}
+
+void git_index_directory_iterator_free(git_index_directory_iterator *iterator)
+{
+	if (iterator == NULL)
+		return;
+
+	if (iterator->dir)
+		git__free(iterator->dir);
+
+	git__free(iterator);
+}
+
 size_t git_index_name_entrycount(git_index *index)
 {
 	assert(index);
